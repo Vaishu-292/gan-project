@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Art Generator</title>
+    <style>
+        :root { --primary: #6366f1; --bg: #f8fafc; --surface: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        
+        .container { background: var(--surface); padding: 2rem; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center; max-width: 500px; width: 100%; }
+        
+        h1 { margin-bottom: 0.5rem; color: #1e293b; }
+        p.subtitle { color: #64748b; margin-bottom: 2rem; }
+        
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        
+        input { padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; width: 120px; font-size: 16px; text-align: center; }
+        input:focus { border-color: var(--primary); outline: none; }
+        
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: transform 0.1s; }
+        button:active { transform: scale(0.96); }
+        button.secondary { background: #e2e8f0; color: #475569; }
+
+        .frame { margin-top: 20px; border-radius: 12px; overflow: hidden; border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); min-height: 400px; display: flex; align-items: center; justify-content: center; background: #f1f5f9; position: relative; }
+        
+        img { max-width: 100%; display: none; }
+        .loader { color: #94a3b8; animation: pulse 1.5s infinite; }
+        
+        .badge { margin-top: 10px; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .badge.demo { background: #fef3c7; color: #d97706; }
+        .badge.real { background: #dcfce7; color: #166534; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🎨 StyleGAN Explorer</h1>
+        <p class="subtitle">Enter a "DNA Seed" to generate a unique human.</p>
+
+        <div class="controls">
+            <input type="number" id="seedInput" placeholder="Seed (e.g. 42)" value="42">
+            <button onclick="generate()">Generate</button>
+            <button class="secondary" onclick="randomize()">🎲</button>
+        </div>
+
+        <div class="frame">
+            <div id="loader" class="loader">Waiting for input...</div>
+            <img id="artImage" src="" alt="Generated Face">
+        </div>
+
+        <div id="statusBadge" class="badge demo" style="display:none">DEMO MODE</div>
+    </div>
+
+    <script>
+        function randomize() {
+            document.getElementById('seedInput').value = Math.floor(Math.random() * 9999);
+            generate();
+        }
+
+        async function generate() {
+            const seed = document.getElementById('seedInput').value;
+            const loader = document.getElementById('loader');
+            const img = document.getElementById('artImage');
+            const badge = document.getElementById('statusBadge');
+
+            // UI Reset
+            img.style.display = 'none';
+            loader.style.display = 'block';
+            loader.innerText = "Synthesizing DNA...";
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seed: parseInt(seed), truncation: 0.7 })
+                });
+                
+                const data = await response.json();
+
+                // Update Image
+                img.src = data.image_url;
+                img.onload = () => {
+                    loader.style.display = 'none';
+                    img.style.display = 'block';
+                };
+
+                // Update Badge (Real vs Demo)
+                badge.style.display = 'inline-block';
+                badge.innerText = data.mode + " MODE";
+                badge.className = "badge " + data.mode.toLowerCase();
+
+            } catch (error) {
+                loader.innerText = "Error: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
